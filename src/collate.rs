@@ -1,6 +1,6 @@
 use crate::fslope::*;
 use crate::numeric::*;
-use geo::prelude::{BoundingRect, Translate};
+use geo::prelude::BoundingRect;
 use geo::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use quickersort;
 use std::cmp::Ordering;
@@ -77,6 +77,7 @@ impl<T: CoordinateType> TiedLine<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn maxx(&self) -> T {
         if self.line.start.x > self.line.end.x {
             self.line.start.x
@@ -298,7 +299,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::collate::*;
-
+    use geo::prelude::Translate;
     #[test]
     fn one_square() {
         let uncollated = MultiLineString::from(vec![
@@ -487,22 +488,6 @@ mod tests {
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
     }
 
-    /*#[test]
-    fn square_two_holes_int() {
-        let exterior: LineString<i64> = vec![(0, 0), (0, 6), (6, 6), (6, 0), (0, 0)].into();
-        let hole1: LineString<i64> = vec![(1, 1), (2, 1), (2, 2), (1, 2), (1, 1)].into();
-        let hole2: LineString<i64> = vec![(3, 3), (4, 3), (4, 4), (3, 4), (3, 3)].into();
-        let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
-        let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
-
-        assert_eq!(collated.0.len(), 1);
-        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
-        assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
-        assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
-        assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
-    }*/
-
     #[test]
     fn one_square_int() {
         let uncollated = MultiLineString::from(vec![(0, 0), (0, 10), (10, 10), (10, 0), (0, 0)]);
@@ -521,5 +506,160 @@ mod tests {
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
+    }
+
+    #[test]
+    fn square_hole_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 30), (30, 30), (30, 0), (0, 0)].into();
+        let hole: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 1);
+        assert_eq!(
+            collated
+                .0
+                .first()
+                .unwrap()
+                .interiors()
+                .first()
+                .unwrap()
+                .0
+                .len(),
+            5
+        );
+    }
+
+    #[test]
+    fn square_with_diamond_hole_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 40), (40, 40), (40, 0), (0, 0)].into();
+        let hole: LineString<i64> = vec![(20, 10), (30, 20), (20, 30), (10, 20), (20, 10)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 1);
+        assert_eq!(
+            collated
+                .0
+                .first()
+                .unwrap()
+                .interiors()
+                .first()
+                .unwrap()
+                .0
+                .len(),
+            5
+        );
+    }
+
+    #[test]
+    fn square_two_holes_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 60), (60, 60), (60, 0), (0, 0)].into();
+        let hole1: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
+        let hole2: LineString<i64> = vec![(30, 30), (40, 30), (40, 40), (30, 40), (30, 30)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
+        assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+    }
+
+    #[test]
+    fn square_two_holes_in_line_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 60), (60, 60), (60, 0), (0, 0)].into();
+        let hole1: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
+        let hole2: LineString<i64> = vec![(30, 10), (40, 10), (40, 20), (30, 20), (30, 10)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
+        assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+    }
+
+    #[test]
+    fn two_polys_square_hole_int() {
+        let exterior1: LineString<i64> = vec![(0, 0), (0, 30), (30, 30), (30, 0), (0, 0)].into();
+        let hole1: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
+        let exterior2: LineString<i64> = exterior1.translate(40, 0);
+
+        let hole2: LineString<i64> = hole1.translate(40, 0);
+
+        let uncollated: MultiLineString<i64> = (vec![exterior1, hole1, exterior2, hole2])
+            .into_iter()
+            .collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 2);
+        assert_eq!(collated.0[0].exterior().0.len(), 5);
+        assert_eq!(collated.0[0].interiors().len(), 1);
+        assert_eq!(collated.0[0].interiors().first().unwrap().0.len(), 5);
+
+        assert_eq!(collated.0[1].exterior().0.len(), 5);
+        assert_eq!(collated.0[1].interiors().len(), 1);
+        assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+    }
+
+    #[test]
+    fn hole_in_line_with_sweep_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 40), (30, 40), (30, 0), (0, 0)].into();
+        let hole: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 1);
+        assert_eq!(
+            collated
+                .0
+                .first()
+                .unwrap()
+                .interiors()
+                .first()
+                .unwrap()
+                .0
+                .len(),
+            5
+        );
+    }
+
+    #[test]
+    fn poly_in_hole_int() {
+        let exterior1: LineString<i64> = vec![(0, 0), (0, 60), (60, 60), (60, 0), (0, 0)].into();
+        let hole1: LineString<i64> = vec![(10, 10), (50, 10), (50, 50), (10, 50), (10, 10)].into();
+        let exterior2: LineString<i64> =
+            vec![(20, 20), (20, 40), (40, 40), (40, 20), (20, 20)].into();
+        let hole2: LineString<i64> = vec![(25, 25), (35, 25), (35, 35), (25, 35), (25, 25)].into();
+
+        let uncollated: MultiLineString<i64> = (vec![exterior1, hole1, exterior2, hole2])
+            .into_iter()
+            .collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 2);
+        assert_eq!(collated.0[0].exterior().0.len(), 5);
+        assert_eq!(collated.0[0].interiors().len(), 1);
+        assert_eq!(collated.0[0].interiors().first().unwrap().0.len(), 5);
+
+        assert_eq!(collated.0[1].exterior().0.len(), 5);
+        assert_eq!(collated.0[1].interiors().len(), 1);
+        assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
     }
 }
