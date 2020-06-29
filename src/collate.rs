@@ -1,3 +1,5 @@
+use crate::fslope::*;
+use crate::numeric::*;
 use geo::prelude::{BoundingRect, Translate};
 use geo::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use quickersort;
@@ -7,80 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error;
 use std::fmt;
-
-pub trait Numeric {
-    fn half(self) -> Self;
-    fn as_float(self) -> f64;
-    fn as_int(self) -> i64;
-    fn from_float(x: f64) -> Self;
-    fn from_int(i: i64) -> Self;
-}
-
-impl Numeric for i64 {
-    fn half(self) -> i64 {
-        self / 2
-    }
-
-    fn as_float(self) -> f64 {
-        self as f64
-    }
-
-    fn as_int(self) -> i64 {
-        self
-    }
-
-    fn from_float(x: f64) -> Self {
-        x as i64
-    }
-
-    fn from_int(x: i64) -> Self {
-        x
-    }
-}
-
-impl Numeric for f64 {
-    fn half(self) -> f64 {
-        self / 2.0
-    }
-
-    fn as_float(self) -> f64 {
-        self
-    }
-
-    fn as_int(self) -> i64 {
-        self as i64
-    }
-
-    fn from_float(x: f64) -> Self {
-        x
-    }
-
-    fn from_int(x: i64) -> Self {
-        x as f64
-    }
-}
-
-trait FSlope {
-    fn fslope(&self) -> f64;
-    fn inv_fslope(&self) -> f64;
-}
-
-impl<T> FSlope for Line<T>
-where
-    T: CoordinateType + Numeric,
-{
-    fn fslope(&self) -> f64 {
-        let dx = self.end.x - self.start.x;
-        let dy = self.end.y - self.start.y;
-        (dy.as_float()) / (dx.as_float())
-    }
-
-    fn inv_fslope(&self) -> f64 {
-        let dx = self.end.x - self.start.x;
-        let dy = self.end.y - self.start.y;
-        (dx.as_float()) / (dy.as_float())
-    }
-}
 
 #[derive(Debug)]
 pub enum CollateError {
@@ -221,7 +149,7 @@ where
         for sweep in sweeps {
             println!("Sweep {}", sweep);
 
-            while cur_line_iter.peek() != None && cur_line_iter.peek().unwrap().miny() < sweep {
+            while cur_line_iter.peek() != None && cur_line_iter.peek().unwrap().miny() <= sweep {
                 println!(
                     "Adding {} {} to heap",
                     cur_line_iter.peek().unwrap().miny(),
@@ -258,11 +186,12 @@ where
                             index: line.index,
                         }
                     } else {
-                        let miny = line.miny();
+                        let miny = line.line.start.y;
                         let x = line.minx()
                             + T::from_float(
-                                (line.line.inv_fslope()).abs() * (sweep - miny).as_float(),
+                                (line.line.inv_fslope()) * (sweep - miny).as_float().abs(),
                             );
+
                         let direction = if line.line.start.y < line.line.end.y {
                             UpDown::Up
                         } else {
@@ -556,5 +485,41 @@ mod tests {
         assert_eq!(collated.0[1].exterior().0.len(), 5);
         assert_eq!(collated.0[1].interiors().len(), 1);
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+    }
+
+    /*#[test]
+    fn square_two_holes_int() {
+        let exterior: LineString<i64> = vec![(0, 0), (0, 6), (6, 6), (6, 0), (0, 0)].into();
+        let hole1: LineString<i64> = vec![(1, 1), (2, 1), (2, 2), (1, 2), (1, 1)].into();
+        let hole2: LineString<i64> = vec![(3, 3), (4, 3), (4, 4), (3, 4), (3, 3)].into();
+        let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+        println!("Collated {:?}", collated);
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
+        assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+    }*/
+
+    #[test]
+    fn one_square_int() {
+        let uncollated = MultiLineString::from(vec![(0, 0), (0, 10), (10, 10), (10, 0), (0, 0)]);
+
+        let collated = uncollated.collate().unwrap();
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
+    }
+
+    #[test]
+    fn one_unit_square_int() {
+        let uncollated = MultiLineString::from(vec![(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]);
+
+        let collated = uncollated.collate().unwrap();
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
     }
 }
