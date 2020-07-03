@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 geo = "0.14.0"
 quickersort = "3.0"
+geo-svg = { git = "ssh://git@github.com/jsadusk/geo-svg" }
