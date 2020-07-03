@@ -155,33 +155,16 @@ where
         let mut exteriors = HashSet::<usize>::new();
 
         for sweep in sweeps {
-            println!("Sweep {}", sweep);
-
             while cur_line_iter.peek() != None && cur_line_iter.peek().unwrap().miny() <= sweep {
-                println!(
-                    "Adding {} {} to heap",
-                    cur_line_iter.peek().unwrap().miny(),
-                    cur_line_iter.peek().unwrap().maxy()
-                );
                 valid_lines.push(cur_line_iter.next().unwrap())
             }
 
-            println!("Top of heap is {}", valid_lines.peek().unwrap().maxy());
             while !valid_lines.is_empty() && valid_lines.peek().unwrap().maxy() < sweep {
-                println!("Popping {}", valid_lines.peek().unwrap().maxy());
                 valid_lines.pop();
             }
 
             if valid_lines.is_empty() {
                 return Err(CollateError::NoValidLinesForSweep);
-            }
-
-            for valid_line in valid_lines.iter() {
-                println!(
-                    "Testing intersection with {} {}",
-                    valid_line.miny(),
-                    valid_line.maxy()
-                );
             }
 
             let mut intersections: Vec<SweepIntersection<T>> = valid_lines
@@ -223,29 +206,12 @@ where
                             },
                         };
 
-                        svg.items.push(&intersection_line);
-                        svg.items.push(&sweep_line);
-                        let mut style = Style::default();
-                        style.stroke_color = Some(Color::Named("black"));
-                        style.stroke_opacity = Some(1.0);
-                        style.stroke_width = Some(0.1);
-                        println!("{}", svg.to_svg_str(&style));
-
                         let direction = if line.line.start.y < line.line.end.y {
                             UpDown::Up
                         } else {
                             UpDown::Down
                         };
 
-                        println!(
-                            "poly {} {:?} intersection at {} dir {:?} 1/slope {} miny {}",
-                            line.index,
-                            line.line,
-                            x,
-                            direction,
-                            line.line.inv_fslope(),
-                            sweep - lefty
-                        );
                         SweepIntersection {
                             x,
                             direction,
@@ -262,23 +228,17 @@ where
             );
 
             intersections.dedup();
-            println!("Intersections {:?}", intersections);
 
             let mut poly_stack = Vec::<usize>::new();
             let mut inside = false;
 
             for intersection in intersections {
                 let last = poly_stack.last();
-                println!(
-                    "Inside {:?} intersection {:?} last {:?}",
-                    inside, intersection, last
-                );
 
                 if !inside {
                     match intersection.direction {
                         UpDown::Up => {
                             if last == None || intersection.index != *last.unwrap() {
-                                println!("Adding {} to exteriors", intersection.index);
                                 exteriors.insert(intersection.index);
                             }
                             inside = true;
@@ -319,8 +279,6 @@ where
             }
         }
 
-        println!("Exteriors {:?}", exteriors);
-        println!("Hole of {:?}", hole_of);
         let mut polys = HashMap::<usize, Vec<LineString<T>>>::new();
         for outer_index in exteriors {
             polys.insert(outer_index, Vec::new());
@@ -371,7 +329,6 @@ mod tests {
             vec![(1.0, 1.0), (2.0, 1.0), (2.0, 2.0), (1.0, 2.0), (1.0, 1.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -398,7 +355,6 @@ mod tests {
             vec![(2.0, 1.0), (3.0, 2.0), (2.0, 3.0), (1.0, 2.0), (2.0, 1.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -427,7 +383,6 @@ mod tests {
             vec![(3.0, 3.0), (4.0, 3.0), (4.0, 4.0), (3.0, 4.0), (3.0, 3.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -446,7 +401,6 @@ mod tests {
             vec![(3.0, 1.0), (4.0, 1.0), (4.0, 2.0), (3.0, 2.0), (3.0, 1.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -469,7 +423,6 @@ mod tests {
             .into_iter()
             .collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 2);
         assert_eq!(collated.0[0].exterior().0.len(), 5);
@@ -489,7 +442,6 @@ mod tests {
             vec![(1.0, 1.0), (2.0, 1.0), (2.0, 2.0), (1.0, 2.0), (1.0, 1.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -523,7 +475,6 @@ mod tests {
             .into_iter()
             .collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 2);
         assert_eq!(collated.0[0].exterior().0.len(), 5);
@@ -561,7 +512,6 @@ mod tests {
         let hole: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
         let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -586,7 +536,6 @@ mod tests {
         let hole: LineString<i64> = vec![(20, 10), (30, 20), (20, 30), (10, 20), (20, 10)].into();
         let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -612,7 +561,6 @@ mod tests {
         let hole2: LineString<i64> = vec![(30, 30), (40, 30), (40, 40), (30, 40), (30, 30)].into();
         let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -628,7 +576,6 @@ mod tests {
         let hole2: LineString<i64> = vec![(30, 10), (40, 10), (40, 20), (30, 20), (30, 10)].into();
         let uncollated: MultiLineString<i64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -649,7 +596,6 @@ mod tests {
             .into_iter()
             .collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 2);
         assert_eq!(collated.0[0].exterior().0.len(), 5);
@@ -667,7 +613,6 @@ mod tests {
         let hole: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
         let uncollated: MultiLineString<i64> = (vec![exterior, hole]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -698,7 +643,6 @@ mod tests {
             .into_iter()
             .collect();
         let collated = uncollated.collate().unwrap();
-        println!("Collated {:?}", collated);
 
         assert_eq!(collated.0.len(), 2);
         assert_eq!(collated.0[0].exterior().0.len(), 5);
@@ -4227,44 +4171,6 @@ mod tests {
             },
         ])]);
 
-        let mut style = Style::default();
-        style.stroke_color = Some(Color::Named("black"));
-        style.stroke_opacity = Some(1.0);
-        style.stroke_width = Some(0.1);
-
-        let collated = layer.collate();
-        match collated {
-            Ok(_collated) => println!("OK"),
-            Err(e) => match e {
-                CollateError::HoleWithoutOutline(sweep, intersection) => {
-                    let mut svg = layer.to_svg();
-                    let sweep_line = Line {
-                        start: Coordinate {
-                            x: layer.bounding_rect().unwrap().min().x,
-                            y: sweep,
-                        },
-                        end: Coordinate {
-                            x: layer.bounding_rect().unwrap().max().x,
-                            y: sweep,
-                        },
-                    };
-                    svg.items.push(&sweep_line);
-                    let intersection_line = Line {
-                        start: Coordinate {
-                            x: intersection,
-                            y: sweep - 0.1,
-                        },
-                        end: Coordinate {
-                            x: intersection,
-                            y: sweep + 0.1,
-                        },
-                    };
-                    svg.items.push(&intersection_line);
-                    println!("{}", svg.to_svg_str(&style));
-                    panic!("{:?}", e);
-                }
-                _ => println!("Other error"),
-            },
-        }
+        let _collated = layer.collate().unwrap();
     }
 }
