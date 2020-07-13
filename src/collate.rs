@@ -98,13 +98,13 @@ impl<T: CoordinateType> Eq for TiedLine<T> {}
 
 impl<T: CoordinateType> Ord for TiedLine<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        return other.maxy().partial_cmp(&self.maxy()).unwrap();
+        other.maxy().partial_cmp(&self.maxy()).unwrap()
     }
 }
 
 impl<T: CoordinateType> PartialOrd for TiedLine<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        return other.maxy().partial_cmp(&self.maxy());
+        other.maxy().partial_cmp(&self.maxy())
     }
 }
 
@@ -125,20 +125,62 @@ where
     index: usize,
 }
 
+#[derive(Debug)]
+struct PolyRange<T>
+where
+    T: CoordinateType,
+{
+    lower: T,
+    upper: T,
+    index: usize,
+}
+
 impl<T> Collate<T> for MultiLineString<T>
 where
     T: CoordinateType + Numeric + fmt::Display + fmt::Debug,
 {
     fn collate(&self) -> CollateResult<MultiPolygon<T>> {
+        let mut poly_ranges: Vec<PolyRange<T>> = self
+            .0
+            .iter()
+            .enumerate()
+            .map(|(index, ls)| {
+                let rect = ls.bounding_rect().unwrap();
+                PolyRange {
+                    lower: rect.min().y,
+                    upper: rect.max().y,
+                    index,
+                }
+            })
+            .collect();
+
+        quickersort::sort_by(&mut poly_ranges, &|a, b| {
+            a.lower.partial_cmp(&b.lower).unwrap()
+        });
+        let mut highest_low = poly_ranges.first().unwrap().lower;
+        let mut lowest_high = poly_ranges.first().unwrap().upper;
+
         let mut sweeps = Vec::<T>::new();
-        sweeps.reserve(self.0.len());
+
+        for poly_range in poly_ranges.iter() {
+            if poly_range.lower >= lowest_high {
+                sweeps.push((lowest_high - highest_low).half() + highest_low);
+                highest_low = poly_range.lower;
+                lowest_high = poly_range.upper;
+            } else {
+                if poly_range.lower > highest_low {
+                    highest_low = poly_range.lower;
+                }
+                if poly_range.upper < lowest_high {
+                    lowest_high = poly_range.upper;
+                }
+            }
+        }
+        sweeps.push((lowest_high - highest_low).half() + highest_low);
 
         let mut lines = Vec::<TiedLine<T>>::new();
 
         for (index, ls) in self.0.iter().enumerate() {
-            let rect = ls.bounding_rect().unwrap();
-            sweeps.push(rect.min().y + (rect.max().y - rect.min().y).half());
-
             for line in ls.lines() {
                 lines.push(TiedLine { line, index });
             }
