@@ -10,9 +10,6 @@ use std::collections::HashSet;
 use std::error;
 use std::fmt;
 
-use geo::Coordinate;
-use geo_svg::*;
-
 #[derive(Debug)]
 pub enum CollateError {
     NoValidLinesForSweep,
@@ -226,27 +223,6 @@ where
                         };
 
                         let x = line.minx() + (sweep - lefty) / T::from_float(line.line.fslope());
-                        let mut svg = line.line.to_svg();
-                        let intersection_line = Line {
-                            start: Coordinate {
-                                x: x,
-                                y: sweep + T::from_float(1.0),
-                            },
-                            end: Coordinate {
-                                x: x,
-                                y: sweep - T::from_float(1.0),
-                            },
-                        };
-                        let sweep_line = Line {
-                            start: Coordinate {
-                                x: x - T::from_float(10.0),
-                                y: sweep,
-                            },
-                            end: Coordinate {
-                                x: x - T::from_float(-10.0),
-                                y: sweep,
-                            },
-                        };
 
                         let direction = if line.line.start.y < line.line.end.y {
                             UpDown::Up
@@ -345,7 +321,6 @@ mod tests {
     use crate::collate::*;
     use geo::prelude::Translate;
     use geo::Coordinate;
-    use geo_svg::*;
 
     #[test]
     fn one_square() {
