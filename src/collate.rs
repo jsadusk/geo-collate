@@ -4,7 +4,6 @@ use geo::prelude::BoundingRect;
 use geo::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use quickersort;
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error;
@@ -187,19 +186,23 @@ where
 
         quickersort::sort_by(&mut sweeps, &|a, b| a.partial_cmp(&b).unwrap());
 
-        let mut valid_lines = BinaryHeap::new();
+        let mut valid_lines = Vec::new();
         let mut cur_line_iter = lines.iter().peekable();
 
         let mut hole_of = HashMap::<usize, usize>::new();
         let mut exteriors = HashSet::<usize>::new();
 
         for sweep in sweeps {
-            while cur_line_iter.peek() != None && cur_line_iter.peek().unwrap().miny() <= sweep {
-                valid_lines.push(cur_line_iter.next().unwrap())
-            }
+            while cur_line_iter.peek() != None {
+                let peeked = &cur_line_iter.peek().unwrap();
+                if peeked.miny() > sweep {
+                    break;
+                }
+                let next = cur_line_iter.next().unwrap();
 
-            while !valid_lines.is_empty() && valid_lines.peek().unwrap().maxy() < sweep {
-                valid_lines.pop();
+                if next.maxy() >= sweep {
+                    valid_lines.push(next);
+                }
             }
 
             if valid_lines.is_empty() {
