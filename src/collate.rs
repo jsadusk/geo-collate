@@ -435,6 +435,24 @@ mod tests {
     }
 
     #[test]
+    fn square_two_holes_overlapping_range() {
+        let exterior: LineString<f64> =
+            vec![(0.0, 0.0), (0.0, 6.0), (6.0, 6.0), (6.0, 0.0), (0.0, 0.0)].into();
+        let hole1: LineString<f64> =
+            vec![(1.0, 1.0), (2.0, 1.0), (2.0, 3.0), (1.0, 3.0), (1.0, 1.0)].into();
+        let hole2: LineString<f64> =
+            vec![(3.0, 2.0), (4.0, 2.0), (4.0, 4.0), (3.0, 4.0), (3.0, 2.0)].into();
+        let uncollated: MultiLineString<f64> = (vec![exterior, hole1, hole2]).into_iter().collect();
+        let collated = uncollated.collate().unwrap();
+
+        assert_eq!(collated.0.len(), 1);
+        assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
+        assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
+        assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+    }
+
+    #[test]
     fn two_polys_square_hole() {
         let exterior1: LineString<f64> =
             vec![(0.0, 0.0), (0.0, 3.0), (3.0, 3.0), (3.0, 0.0), (0.0, 0.0)].into();
