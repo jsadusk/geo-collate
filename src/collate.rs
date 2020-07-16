@@ -1,5 +1,4 @@
-use crate::fslope::*;
-use crate::numeric::*;
+use crate::numeric::Numeric;
 use geo::prelude::BoundingRect;
 use geo::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use quickersort;
@@ -161,7 +160,7 @@ where
 
         for poly_range in poly_ranges.iter() {
             if poly_range.lower >= lowest_high {
-                sweeps.push((lowest_high - highest_low).half() + highest_low);
+                sweeps.push((lowest_high - highest_low) / T::from_int(2) + highest_low);
                 highest_low = poly_range.lower;
                 lowest_high = poly_range.upper;
             } else {
@@ -173,7 +172,7 @@ where
                 }
             }
         }
-        sweeps.push((lowest_high - highest_low).half() + highest_low);
+        sweeps.push((lowest_high - highest_low) / T::from_int(2) + highest_low);
 
         let mut lines = Vec::<TiedLine<T>>::new();
 
@@ -230,7 +229,7 @@ where
                             line.line.end.y
                         };
 
-                        let x = line.minx() + (sweep - lefty) / T::from_float(line.line.fslope());
+                        let x = line.minx() + (sweep - lefty) * line.line.dx() / line.line.dy();
 
                         let direction = if line.line.start.y < line.line.end.y {
                             UpDown::Up
