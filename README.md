@@ -7,7 +7,7 @@ Polygon collation is converting an unorganized set of closed [LineStrings](https
 
 ## Example
 
-```
+```rust
 let exterior1: LineString<i64> = vec![(0, 0), (0, 30), (30, 30), (30, 0), (0, 0)].into();
 let hole1: LineString<i64> = vec![(10, 10), (20, 10), (20, 20), (10, 20), (10, 10)].into();
 let exterior2: LineString<i64> = exterior1.translate(40, 0);
