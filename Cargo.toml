@@ -1,5 +1,5 @@
 [package]
-name = "geo_ops"
+name = "geo-collate"
 version = "0.1.0"
 authors = ["Joe Sadusk <joe@sadusk.com>"]
 edition = "2018"
