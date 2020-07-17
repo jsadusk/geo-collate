@@ -1,5 +1,4 @@
 extern crate geo_types;
-extern crate quickersort;
 
 pub mod collate;
 pub mod numeric;

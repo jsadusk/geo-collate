@@ -1,6 +1,5 @@
 use crate::numeric::Numeric;
 use geo_types::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
-use quickersort;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
@@ -209,15 +208,13 @@ where
 {
     let mut poly_ranges = get_poly_ranges(polys);
 
-    quickersort::sort_by(&mut poly_ranges, &|a, b| {
-        a.lower.partial_cmp(&b.lower).unwrap()
-    });
+    poly_ranges.sort_unstable_by(|a, b| a.lower.partial_cmp(&b.lower).unwrap());
 
     let mut sweeps = get_sweep_lines(poly_ranges);
-    quickersort::sort_by(&mut sweeps, &|a, b| a.partial_cmp(&b).unwrap());
+    sweeps.sort_unstable_by(|a, b| a.partial_cmp(&b).unwrap());
 
     let mut lines = tie_lines_to_polys(polys);
-    quickersort::sort_by(&mut lines, &|a, b| a.miny().partial_cmp(&b.miny()).unwrap());
+    lines.sort_unstable_by(|a, b| a.miny().partial_cmp(&b.miny()).unwrap());
 
     let mut valid_lines = BinaryHeap::new();
     let mut cur_line_iter = lines.iter().peekable();
@@ -278,10 +275,9 @@ where
                 }
             })
             .collect();
-        quickersort::sort_by(
-            &mut intersections,
-            &|a: &SweepIntersection<T>, b: &SweepIntersection<T>| a.x.partial_cmp(&b.x).unwrap(),
-        );
+        intersections.sort_unstable_by(|a: &SweepIntersection<T>, b: &SweepIntersection<T>| {
+            a.x.partial_cmp(&b.x).unwrap()
+        });
 
         intersections.dedup();
 
