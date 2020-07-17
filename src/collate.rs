@@ -1,6 +1,5 @@
 use crate::numeric::Numeric;
-use geo::prelude::BoundingRect;
-use geo::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
+use geo_types::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use quickersort;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -133,17 +132,27 @@ where
 
 fn get_poly_ranges<T>(polys: &MultiLineString<T>) -> Vec<PolyRange<T>>
 where
-    T: CoordinateType,
+    T: CoordinateType + PartialOrd,
 {
     polys
         .0
         .iter()
         .enumerate()
         .map(|(index, ls)| {
-            let rect = ls.bounding_rect().unwrap();
+            let miny =
+                ls.0.iter()
+                    .map(|l| l.y)
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+            let maxy =
+                ls.0.iter()
+                    .map(|l| l.y)
+                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+
             PolyRange {
-                lower: rect.min().y,
-                upper: rect.max().y,
+                lower: miny,
+                upper: maxy,
                 index,
             }
         })

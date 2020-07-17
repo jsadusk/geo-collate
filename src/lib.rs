@@ -1,4 +1,4 @@
-extern crate geo;
+extern crate geo_types;
 extern crate quickersort;
 
 pub mod collate;

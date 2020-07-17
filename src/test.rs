@@ -2,7 +2,7 @@
 mod test {
     use crate::collate::*;
     use geo::prelude::Translate;
-    use geo::{Coordinate, LineString, MultiLineString};
+    use geo_types::{Coordinate, LineString, MultiLineString};
 
     #[test]
     fn one_square() {
