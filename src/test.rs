@@ -82,12 +82,19 @@ mod test {
             vec![(3.0, 3.0), (4.0, 3.0), (4.0, 4.0), (3.0, 4.0), (3.0, 3.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
+        let collated2 = uncollated.collate_into().unwrap();
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+
+        assert_eq!(collated2.0.len(), 1);
+        assert_eq!(collated2.0.first().unwrap().exterior().0.len(), 5);
+        assert_eq!(collated2.0.first().unwrap().interiors().len(), 2);
+        assert_eq!(collated2.0.first().unwrap().interiors()[0].0.len(), 5);
+        assert_eq!(collated2.0.first().unwrap().interiors()[1].0.len(), 5);
     }
 
     #[test]

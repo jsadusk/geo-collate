@@ -14,6 +14,7 @@ pub enum CollateError {
     OutlineIsHole,
     OutlineInOutline,
     EmptyPolyStack,
+    IndexNotInMaps,
 }
 
 impl error::Error for CollateError {}
@@ -30,6 +31,7 @@ impl fmt::Display for CollateError {
             Self::OutlineIsHole => write!(f, "Previous detected outline is a hole"),
             Self::OutlineInOutline => write!(f, "Outline directly inside outline"),
             Self::EmptyPolyStack => write!(f, "Polygon stack empty when trying to pop"),
+            Self::IndexNotInMaps => write!(f, "Linestring index not in exterior or interior maps"),
         }
     }
 }
@@ -362,20 +364,27 @@ where
     fn collate_into(self) -> CollateResult<MultiPolygon<T>> {
         let (hole_of, exteriors) = get_poly_hole_map(&self)?;
 
-        let mut polys = HashMap::<usize, Vec<LineString<T>>>::new();
-        for outer_index in exteriors {
-            polys.insert(outer_index, Vec::new());
+        let mut polys = HashMap::<usize, Polygon<T>>::new();
+
+        for (i, ls) in self.into_iter().enumerate() {
+            if exteriors.contains(&i) {
+                polys
+                    .entry(i)
+                    .and_modify(|poly| poly.exterior_mut(|exterior| *exterior = ls.clone()))
+                    .or_insert(Polygon::<T>::new(ls, vec![]));
+            } else {
+                let exterior_i = hole_of.get(&i).ok_or(CollateError::IndexNotInMaps)?;
+                let poly = polys
+                    .entry(*exterior_i)
+                    .or_insert(Polygon::<T>::new(LineString(vec![]), vec![]));
+                poly.interiors_push(ls);
+            }
         }
 
-        for (inner_index, outer_index) in hole_of {
-            let inner = polys.get_mut(&outer_index).unwrap();
-            inner.push(self.0[inner_index].clone());
-        }
-
-        Ok(MultiPolygon::from(
+        Ok(MultiPolygon(
             polys
                 .into_iter()
-                .map(|(outer_index, inner)| Polygon::new(self.0[outer_index].clone(), inner))
+                .map(|(_i, p)| p)
                 .collect::<Vec<Polygon<T>>>(),
         ))
     }
