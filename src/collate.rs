@@ -1,6 +1,7 @@
 use crate::numeric::Numeric;
 use geo_types::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use std::cmp::Ordering;
+use std::collections::hash_map;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -368,16 +369,24 @@ where
 
         for (i, ls) in self.into_iter().enumerate() {
             if exteriors.contains(&i) {
-                polys
-                    .entry(i)
-                    .and_modify(|poly| poly.exterior_mut(|exterior| *exterior = ls.clone()))
-                    .or_insert(Polygon::<T>::new(ls, vec![]));
+                match polys.entry(i) {
+                    hash_map::Entry::Occupied(mut poly) => {
+                        let _val = poly
+                            .get_mut()
+                            .exterior_mut(|exterior| *exterior = ls.clone());
+                    }
+                    hash_map::Entry::Vacant(poly) => {
+                        let _val = poly.insert(Polygon::<T>::new(ls, vec![]));
+                    }
+                }
             } else {
                 let exterior_i = hole_of.get(&i).ok_or(CollateError::IndexNotInMaps)?;
-                let poly = polys
-                    .entry(*exterior_i)
-                    .or_insert(Polygon::<T>::new(LineString(vec![]), vec![]));
-                poly.interiors_push(ls);
+                match polys.entry(*exterior_i) {
+                    hash_map::Entry::Occupied(mut poly) => poly.get_mut().interiors_push(ls),
+                    hash_map::Entry::Vacant(poly) => {
+                        let _val = poly.insert(Polygon::<T>::new(LineString(vec![]), vec![ls]));
+                    }
+                }
             }
         }
 

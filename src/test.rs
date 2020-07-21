@@ -2,7 +2,61 @@
 mod test {
     use crate::collate::*;
     use geo::prelude::Translate;
-    use geo_types::{Coordinate, LineString, MultiLineString};
+    use geo_types::{
+        Coordinate, CoordinateType, LineString, MultiLineString, MultiPolygon, Polygon,
+    };
+
+    fn polygons_equivalent<T: CoordinateType>(one: &Polygon<T>, two: &Polygon<T>) -> bool {
+        if one.exterior() != two.exterior() {
+            return false;
+        }
+
+        if one.interiors().len() != two.interiors().len() {
+            return false;
+        }
+
+        for one_interior in one.interiors().iter() {
+            let mut found = false;
+            for two_interior in two.interiors().iter() {
+                if one_interior == two_interior {
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    fn multi_polygons_equivalent<T: CoordinateType>(
+        one: &MultiPolygon<T>,
+        two: &MultiPolygon<T>,
+    ) -> bool {
+        if one.0.len() != two.0.len() {
+            return false;
+        }
+
+        for one_poly in one.0.iter() {
+            let mut found = false;
+
+            for two_poly in two.0.iter() {
+                if polygons_equivalent(one_poly, two_poly) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     #[test]
     fn one_square() {
@@ -18,6 +72,9 @@ mod test {
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -44,6 +101,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -70,6 +130,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -82,7 +145,6 @@ mod test {
             vec![(3.0, 3.0), (4.0, 3.0), (4.0, 4.0), (3.0, 4.0), (3.0, 3.0)].into();
         let uncollated: MultiLineString<f64> = (vec![exterior, hole1, hole2]).into_iter().collect();
         let collated = uncollated.collate().unwrap();
-        let collated2 = uncollated.collate_into().unwrap();
 
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
@@ -90,11 +152,8 @@ mod test {
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
 
-        assert_eq!(collated2.0.len(), 1);
-        assert_eq!(collated2.0.first().unwrap().exterior().0.len(), 5);
-        assert_eq!(collated2.0.first().unwrap().interiors().len(), 2);
-        assert_eq!(collated2.0.first().unwrap().interiors()[0].0.len(), 5);
-        assert_eq!(collated2.0.first().unwrap().interiors()[1].0.len(), 5);
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -113,6 +172,9 @@ mod test {
         assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -131,6 +193,9 @@ mod test {
         assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -156,6 +221,9 @@ mod test {
         assert_eq!(collated.0[1].exterior().0.len(), 5);
         assert_eq!(collated.0[1].interiors().len(), 1);
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -182,6 +250,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -208,6 +279,9 @@ mod test {
         assert_eq!(collated.0[1].exterior().0.len(), 5);
         assert_eq!(collated.0[1].interiors().len(), 1);
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -218,6 +292,9 @@ mod test {
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -228,6 +305,9 @@ mod test {
         assert_eq!(collated.0.len(), 1);
         assert_eq!(collated.0.first().unwrap().exterior().0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors().len(), 0);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -252,6 +332,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -276,6 +359,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -291,6 +377,9 @@ mod test {
         assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -306,6 +395,9 @@ mod test {
         assert_eq!(collated.0.first().unwrap().interiors().len(), 2);
         assert_eq!(collated.0.first().unwrap().interiors()[0].0.len(), 5);
         assert_eq!(collated.0.first().unwrap().interiors()[1].0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -329,6 +421,9 @@ mod test {
         assert_eq!(collated.0[1].exterior().0.len(), 5);
         assert_eq!(collated.0[1].interiors().len(), 1);
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -353,6 +448,9 @@ mod test {
                 .len(),
             5
         );
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -376,6 +474,9 @@ mod test {
         assert_eq!(collated.0[1].exterior().0.len(), 5);
         assert_eq!(collated.0[1].interiors().len(), 1);
         assert_eq!(collated.0[1].interiors().first().unwrap().0.len(), 5);
+
+        let collated_into = uncollated.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 
     #[test]
@@ -3895,6 +3996,9 @@ mod test {
             },
         ])]);
 
-        let _collated = layer.collate().unwrap();
+        let collated = layer.collate().unwrap();
+
+        let collated_into = layer.collate_into().unwrap();
+        assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
 }
