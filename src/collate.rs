@@ -341,27 +341,49 @@ impl<T> Collate<T> for MultiLineString<T>
 where
     T: CoordinateType + Numeric + fmt::Display + fmt::Debug,
 {
+    /// Collate an unsorted `MultiLineString` into a collated `MultiPolygon`.
+    /// Non-consuming, makes copies of `LineString`s.
     fn collate(&self) -> CollateResult<MultiPolygon<T>> {
-        let (hole_of, exteriors) = get_poly_hole_map(self)?;
+        let (hole_of, exteriors) = get_poly_hole_map(&self)?;
 
-        let mut polys = HashMap::<usize, Vec<LineString<T>>>::new();
-        for outer_index in exteriors {
-            polys.insert(outer_index, Vec::new());
+        let mut polys = HashMap::<usize, Polygon<T>>::new();
+
+        for (i, ls) in self.0.iter().enumerate() {
+            if exteriors.contains(&i) {
+                match polys.entry(i) {
+                    hash_map::Entry::Occupied(mut poly) => {
+                        let _val = poly
+                            .get_mut()
+                            .exterior_mut(|exterior| *exterior = ls.clone());
+                    }
+                    hash_map::Entry::Vacant(poly) => {
+                        let _val = poly.insert(Polygon::<T>::new(ls.clone(), vec![]));
+                    }
+                }
+            } else {
+                let exterior_i = hole_of.get(&i).ok_or(CollateError::IndexNotInMaps)?;
+                match polys.entry(*exterior_i) {
+                    hash_map::Entry::Occupied(mut poly) => {
+                        poly.get_mut().interiors_push(ls.clone())
+                    }
+                    hash_map::Entry::Vacant(poly) => {
+                        let _val =
+                            poly.insert(Polygon::<T>::new(LineString(vec![]), vec![ls.clone()]));
+                    }
+                }
+            }
         }
 
-        for (inner_index, outer_index) in hole_of {
-            let inner = polys.get_mut(&outer_index).unwrap();
-            inner.push(self.0[inner_index].clone());
-        }
-
-        Ok(MultiPolygon::from(
+        Ok(MultiPolygon(
             polys
                 .into_iter()
-                .map(|(outer_index, inner)| Polygon::new(self.0[outer_index].clone(), inner))
+                .map(|(_i, p)| p)
                 .collect::<Vec<Polygon<T>>>(),
         ))
     }
 
+    /// Collate an unsorted `MultiLineString` into a collated `MultiPolygon`.
+    /// Consuming, does not copy the original `LineString`s (TODO: exteriors are sometimes copied due to working around a bug in the `exterior_mut` method on `Polygon`.
     fn collate_into(self) -> CollateResult<MultiPolygon<T>> {
         let (hole_of, exteriors) = get_poly_hole_map(&self)?;
 
@@ -373,6 +395,8 @@ where
                     hash_map::Entry::Occupied(mut poly) => {
                         let _val = poly
                             .get_mut()
+                            // clone ls even though we are consuming self
+                            // because of a bug in exterior_mut
                             .exterior_mut(|exterior| *exterior = ls.clone());
                     }
                     hash_map::Entry::Vacant(poly) => {
