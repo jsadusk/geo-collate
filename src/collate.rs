@@ -1,5 +1,5 @@
 use crate::numeric::Numeric;
-use geo_types::{CoordinateType, Line, LineString, MultiLineString, MultiPolygon, Polygon};
+use geo_types::{CoordNum, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use std::cmp::Ordering;
 use std::collections::hash_map;
 use std::collections::BinaryHeap;
@@ -41,7 +41,7 @@ pub type CollateResult<T> = Result<T, CollateError>;
 
 pub trait Collate<T>
 where
-    T: CoordinateType,
+    T: CoordNum,
 {
     fn collate(&self) -> CollateResult<MultiPolygon<T>>;
     fn collate_into(self) -> CollateResult<MultiPolygon<T>>;
@@ -50,13 +50,13 @@ where
 #[derive(PartialEq)]
 struct TiedLine<T>
 where
-    T: CoordinateType,
+    T: CoordNum,
 {
     line: Line<T>,
     index: usize,
 }
 
-impl<T: CoordinateType> TiedLine<T> {
+impl<T: CoordNum> TiedLine<T> {
     pub fn miny(&self) -> T {
         if self.line.start.y < self.line.end.y {
             self.line.start.y
@@ -91,15 +91,15 @@ impl<T: CoordinateType> TiedLine<T> {
     }
 }
 
-impl<T: CoordinateType> Eq for TiedLine<T> {}
+impl<T: CoordNum> Eq for TiedLine<T> {}
 
-impl<T: CoordinateType> Ord for TiedLine<T> {
+impl<T: CoordNum> Ord for TiedLine<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         other.maxy().partial_cmp(&self.maxy()).unwrap()
     }
 }
 
-impl<T: CoordinateType> PartialOrd for TiedLine<T> {
+impl<T: CoordNum> PartialOrd for TiedLine<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         other.maxy().partial_cmp(&self.maxy())
     }
@@ -115,7 +115,7 @@ enum UpDown {
 #[derive(Debug, PartialEq)]
 struct SweepIntersection<T>
 where
-    T: CoordinateType,
+    T: CoordNum,
 {
     x: T,
     direction: UpDown,
@@ -125,7 +125,7 @@ where
 #[derive(Debug)]
 struct PolyRange<T>
 where
-    T: CoordinateType,
+    T: CoordNum,
 {
     lower: T,
     upper: T,
@@ -134,7 +134,7 @@ where
 
 fn get_poly_ranges<T>(polys: &MultiLineString<T>) -> Vec<PolyRange<T>>
 where
-    T: CoordinateType + PartialOrd,
+    T: CoordNum + PartialOrd,
 {
     polys
         .0
@@ -163,7 +163,7 @@ where
 
 fn get_sweep_lines<T>(ranges: Vec<PolyRange<T>>) -> Vec<T>
 where
-    T: CoordinateType + Numeric,
+    T: CoordNum + Numeric,
 {
     let mut highest_low = ranges.first().unwrap().lower;
     let mut lowest_high = ranges.first().unwrap().upper;
@@ -191,7 +191,7 @@ where
 
 fn tie_lines_to_polys<T>(polys: &MultiLineString<T>) -> Vec<TiedLine<T>>
 where
-    T: CoordinateType,
+    T: CoordNum,
 {
     let mut lines = Vec::<TiedLine<T>>::new();
 
@@ -207,7 +207,7 @@ fn get_poly_hole_map<T>(
     polys: &MultiLineString<T>,
 ) -> CollateResult<(HashMap<usize, usize>, HashSet<usize>)>
 where
-    T: CoordinateType + Numeric,
+    T: CoordNum + Numeric,
 {
     let mut poly_ranges = get_poly_ranges(polys);
 
@@ -339,7 +339,7 @@ where
 
 impl<T> Collate<T> for MultiLineString<T>
 where
-    T: CoordinateType + Numeric + fmt::Display + fmt::Debug,
+    T: CoordNum + Numeric + fmt::Display + fmt::Debug,
 {
     /// Collate an unsorted `MultiLineString` into a collated `MultiPolygon`.
     /// Non-consuming, makes copies of `LineString`s.
