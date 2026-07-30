@@ -4001,4 +4001,20 @@ mod test {
         let collated_into = layer.collate_into().unwrap();
         assert!(multi_polygons_equivalent(&collated, &collated_into));
     }
+
+    #[test]
+    fn empty_multilinestring_returns_error_not_panic() {
+        // Regression: previously `.collate_into()` panicked on empty input
+        // because `get_sweep_lines` did `.first().unwrap()` on an empty
+        // range list. Callers should get a returnable error instead.
+        let empty: MultiLineString<f64> = MultiLineString(vec![]);
+        let err = empty.collate().expect_err("empty input should error");
+        assert!(matches!(err, CollateError::NoValidLinesForSweep));
+
+        let empty_into: MultiLineString<f64> = MultiLineString(vec![]);
+        let err = empty_into
+            .collate_into()
+            .expect_err("empty input should error");
+        assert!(matches!(err, CollateError::NoValidLinesForSweep));
+    }
 }
