@@ -5,36 +5,23 @@ use std::collections::hash_map;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::error;
 use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum CollateError {
+    #[error("no valid lines for sweep")]
     NoValidLinesForSweep,
+    #[error("hole without outline at sweep {0} {1}")]
     HoleWithoutOutline(f64, f64),
+    #[error("previous detected outline is a hole")]
     OutlineIsHole,
+    #[error("outline directly inside outline")]
     OutlineInOutline,
+    #[error("polygon stack empty when trying to pop")]
     EmptyPolyStack,
+    #[error("linestring index not in exterior or interior maps")]
     IndexNotInMaps,
-}
-
-impl error::Error for CollateError {}
-
-impl fmt::Display for CollateError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NoValidLinesForSweep => write!(f, "No valid lines for sweep"),
-            Self::HoleWithoutOutline(sweep, intersection) => write!(
-                f,
-                "Hole without outline at sweep {} {}",
-                sweep, intersection
-            ),
-            Self::OutlineIsHole => write!(f, "Previous detected outline is a hole"),
-            Self::OutlineInOutline => write!(f, "Outline directly inside outline"),
-            Self::EmptyPolyStack => write!(f, "Polygon stack empty when trying to pop"),
-            Self::IndexNotInMaps => write!(f, "Linestring index not in exterior or interior maps"),
-        }
-    }
 }
 
 pub type CollateResult<T> = Result<T, CollateError>;
@@ -161,12 +148,15 @@ where
         .collect()
 }
 
-fn get_sweep_lines<T>(ranges: Vec<PolyRange<T>>) -> Vec<T>
+fn get_sweep_lines<T>(ranges: Vec<PolyRange<T>>) -> CollateResult<Vec<T>>
 where
     T: CoordNum + Numeric,
 {
-    let mut highest_low = ranges.first().unwrap().lower;
-    let mut lowest_high = ranges.first().unwrap().upper;
+    let first = ranges
+        .first()
+        .ok_or(CollateError::NoValidLinesForSweep)?;
+    let mut highest_low = first.lower;
+    let mut lowest_high = first.upper;
 
     let mut sweeps = Vec::<T>::new();
 
@@ -186,7 +176,7 @@ where
     }
     sweeps.push((lowest_high - highest_low) / T::from_int(2) + highest_low);
 
-    sweeps
+    Ok(sweeps)
 }
 
 fn tie_lines_to_polys<T>(polys: &MultiLineString<T>) -> Vec<TiedLine<T>>
@@ -213,7 +203,7 @@ where
 
     poly_ranges.sort_unstable_by(|a, b| a.lower.partial_cmp(&b.lower).unwrap());
 
-    let mut sweeps = get_sweep_lines(poly_ranges);
+    let mut sweeps = get_sweep_lines(poly_ranges)?;
     sweeps.sort_unstable_by(|a, b| a.partial_cmp(&b).unwrap());
 
     let mut lines = tie_lines_to_polys(polys);
